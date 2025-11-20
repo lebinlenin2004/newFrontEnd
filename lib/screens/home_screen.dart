@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:carousel_slider/carousel_slider.dart';
 
-// Import CartProvider with an alias to avoid ambiguous imports
+// Import CartProvider with alias to avoid ambiguity
 import 'package:rjn_store_app/providers/cart_provider.dart' as cart_provider;
 
 import 'package:rjn_store_app/screens/category_screen.dart';
@@ -15,7 +16,6 @@ import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   HomeScreenState createState() => HomeScreenState();
 }
@@ -46,31 +46,37 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchOffers() async {
     try {
-      setState(() {
-        offers = [
-          {"image": "https://via.placeholder.com/400x180?text=Big+Sale+Up+to+50%25+Off"},
-          {"image": "https://via.placeholder.com/400x180?text=New+Arrivals+Are+Here"},
-          {"image": "https://via.placeholder.com/400x180?text=Festive+Offers+This+Week"},
-        ];
-      });
+      final response = await http.get(Uri.parse('$baseUrl/offers/'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<dynamic> fetchedOffers = [];
+        if (data is Map && data['results'] != null) {
+          fetchedOffers = data['results'];
+        } else if (data is List) {
+          fetchedOffers = data;
+        }
+        setState(() {
+          offers = fetchedOffers;
+        });
+      } else {
+        debugPrint('❌ Failed to fetch offers: ${response.statusCode}');
+      }
     } catch (e) {
-      debugPrint("🚨 Error fetching offers: $e");
+      debugPrint('🚨 Error fetching offers: $e');
     }
   }
 
   Future<void> fetchProducts() async {
     setState(() => isLoadingProducts = true);
     try {
-      final response = await http.get(Uri.parse("$baseUrl/products/"));
+      final response = await http.get(Uri.parse('$baseUrl/products/'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<dynamic> fetchedProducts;
+        List<dynamic> fetchedProducts = [];
         if (data is Map && data['results'] != null) {
           fetchedProducts = data['results'];
         } else if (data is List) {
           fetchedProducts = data;
-        } else {
-          fetchedProducts = [];
         }
         setState(() {
           products = fetchedProducts;
@@ -79,27 +85,25 @@ class HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() => isLoadingProducts = false);
-        debugPrint("❌ Failed to fetch products: ${response.statusCode}");
+        debugPrint('❌ Failed to fetch products: ${response.statusCode}');
       }
     } catch (e) {
       setState(() => isLoadingProducts = false);
-      debugPrint("🚨 Error fetching products: $e");
+      debugPrint('🚨 Error fetching products: $e');
     }
   }
 
   Future<void> fetchCategories() async {
     setState(() => isLoadingCategories = true);
     try {
-      final response = await http.get(Uri.parse("$baseUrl/categories/"));
+      final response = await http.get(Uri.parse('$baseUrl/categories/'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<dynamic> fetchedCategories;
+        List<dynamic> fetchedCategories = [];
         if (data is Map && data['results'] != null) {
           fetchedCategories = data['results'];
         } else if (data is List) {
           fetchedCategories = data;
-        } else {
-          fetchedCategories = [];
         }
         setState(() {
           categories = [
@@ -110,11 +114,11 @@ class HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() => isLoadingCategories = false);
-        debugPrint("❌ Failed to fetch categories: ${response.statusCode}");
+        debugPrint('❌ Failed to fetch categories: ${response.statusCode}');
       }
     } catch (e) {
       setState(() => isLoadingCategories = false);
-      debugPrint("🚨 Error fetching categories: $e");
+      debugPrint('🚨 Error fetching categories: $e');
     }
   }
 
@@ -134,7 +138,9 @@ class HomeScreenState extends State<HomeScreen> {
         filteredProducts = filteredProducts
             .where((p) =>
                 p['name'].toLowerCase().contains(searchQuery.toLowerCase()) ||
-                (p['description'] ?? '').toLowerCase().contains(searchQuery.toLowerCase()))
+                (p['description'] ?? '')
+                    .toLowerCase()
+                    .contains(searchQuery.toLowerCase()))
             .toList();
       }
     });
@@ -150,7 +156,9 @@ class HomeScreenState extends State<HomeScreen> {
                       ? p['category'] == selectedCategoryId
                       : p['category']['id'] == selectedCategoryId)) &&
               (p['name'].toLowerCase().contains(query.toLowerCase()) ||
-                  (p['description'] ?? '').toLowerCase().contains(query.toLowerCase())))
+                  (p['description'] ?? '')
+                      .toLowerCase()
+                      .contains(query.toLowerCase())))
           .toList();
     });
   }
@@ -206,28 +214,33 @@ class HomeScreenState extends State<HomeScreen> {
 
   Widget buildOffers() {
     if (offers.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 180,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9),
-        itemCount: offers.length,
-        itemBuilder: (context, index) {
-          final offer = offers[index];
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              image: DecorationImage(
-                image: NetworkImage(offer['image']),
-                fit: BoxFit.cover,
-              ),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 2)),
-              ],
-            ),
-          );
-        },
+    return CarouselSlider(
+      options: CarouselOptions(
+        height: 180,
+        enlargeCenterPage: true,
+        autoPlay: true,
+        autoPlayInterval: const Duration(seconds: 3),
+        viewportFraction: 0.9,
       ),
+      items: offers.map((offer) {
+        return Builder(
+          builder: (BuildContext context) {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                image: DecorationImage(
+                  image: NetworkImage(offer['image']),
+                  fit: BoxFit.cover,
+                ),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 2)),
+                ],
+              ),
+            );
+          },
+        );
+      }).toList(),
     );
   }
 
@@ -409,7 +422,7 @@ class HomeScreenState extends State<HomeScreen> {
       case 1:
         return const CategoryScreen();
       case 2:
-        return CartScreen(); // Removed const from here because CartScreen constructor isn't const
+        return CartScreen();
       case 3:
         return const OrdersScreen();
       case 4:

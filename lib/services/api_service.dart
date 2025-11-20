@@ -16,9 +16,7 @@ class ApiService {
   // Getter for access token
   String? get accessToken => _accessToken;
 
-  // -------------------------
   // REGISTER USER
-  // -------------------------
   Future<bool> registerUser(String username, String email, String password) async {
     final url = Uri.parse('$baseUrl/register/');
     debugPrint('📡 Sending registration request to: $url');
@@ -45,11 +43,9 @@ class ApiService {
     }
   }
 
-  // -------------------------
   // LOGIN USER (JWT)
-  // -------------------------
   Future<bool> loginUser(String username, String password) async {
-    final url = Uri.parse('$baseUrl/token/');
+    final url = Uri.parse('$baseUrl/login/');
     debugPrint('📡 Sending login request to: $url');
 
     try {
@@ -83,9 +79,7 @@ class ApiService {
     }
   }
 
-  // -------------------------
   // LOAD TOKENS
-  // -------------------------
   Future<void> loadTokens() async {
     final prefs = await SharedPreferences.getInstance();
     _accessToken = prefs.getString('access');
@@ -93,9 +87,7 @@ class ApiService {
     debugPrint('🔑 Tokens loaded: access=$_accessToken, refresh=$_refreshToken');
   }
 
-  // -------------------------
   // AUTHORIZED GET REQUEST
-  // -------------------------
   Future<http.Response> getAuthorized(String endpoint) async {
     await loadTokens(); // ensure token is loaded
     final url = Uri.parse('$baseUrl/$endpoint');
@@ -110,9 +102,7 @@ class ApiService {
     );
   }
 
-  // -------------------------
   // FETCH PRODUCTS
-  // -------------------------
   Future<List<Product>> fetchProducts() async {
     await loadTokens(); // ensure token is loaded
     final url = Uri.parse('$baseUrl/products/');
@@ -140,9 +130,7 @@ class ApiService {
     }
   }
 
-  // -------------------------
   // FETCH CATEGORIES
-  // -------------------------
   Future<List<Category>> fetchCategories() async {
     await loadTokens(); // ensure token is loaded
     final url = Uri.parse('$baseUrl/categories/');
@@ -170,9 +158,40 @@ class ApiService {
     }
   }
 
-  // -------------------------
+  // FETCH OFFERS
+  Future<List<Map<String, dynamic>>> fetchOffers() async {
+    await loadTokens(); // ensure token is loaded
+    final url = Uri.parse('$baseUrl/offers/');
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+        },
+      );
+
+      debugPrint('Offers Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['results'] != null) {
+          return List<Map<String, dynamic>>.from(data['results']);
+        } else if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        }
+        return [];
+      } else {
+        debugPrint('❌ Failed to fetch offers: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('🚨 Error fetching offers: $e');
+      return [];
+    }
+  }
+
   // LOGOUT
-  // -------------------------
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access');

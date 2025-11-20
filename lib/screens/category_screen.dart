@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rjn_store_app/providers/cart_provider.dart' as cart_provider;
 import 'package:rjn_store_app/screens/product_detail_screen.dart';
-import 'dart:convert';               // For jsonDecode
+import 'dart:convert'; // For jsonDecode
 import 'package:http/http.dart' as http;
 
 class CategoryScreen extends StatefulWidget {
@@ -48,7 +48,7 @@ class CategoryScreenState extends State<CategoryScreen> {
       if (productResponse.statusCode == 200) {
         final productData = jsonDecode(productResponse.body);
         allProducts = parseListFromResponse(productData);
-        filteredProducts = List.from(allProducts);  // Show all products initially
+        filteredProducts = List.from(allProducts);
       } else {
         allProducts = [];
         filteredProducts = [];
@@ -67,7 +67,10 @@ class CategoryScreenState extends State<CategoryScreen> {
 
   List<Map<String, dynamic>> parseListFromResponse(dynamic data) {
     if (data is List) {
-      return data.where((e) => e != null).map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e)).toList();
+      return data
+          .where((e) => e != null)
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+          .toList();
     } else if (data is Map) {
       if (data.containsKey('results') && data['results'] is List) {
         return List<Map<String, dynamic>>.from(data['results']);
@@ -90,7 +93,7 @@ class CategoryScreenState extends State<CategoryScreen> {
     setState(() {
       selectedCategoryId = categoryId;
       if (categoryId == null || categoryId == 0) {
-        filteredProducts = List.from(allProducts);  // Show all products if no category selected
+        filteredProducts = List.from(allProducts);
       } else {
         filteredProducts = allProducts.where((p) {
           final category = p['category'];
@@ -107,7 +110,8 @@ class CategoryScreenState extends State<CategoryScreen> {
 
   PreferredSizeWidget buildCategoryAppBar() {
     return AppBar(
-      title: const Text('Categories', style: TextStyle(fontWeight: FontWeight.bold)),
+      title:
+          const Text('Categories', style: TextStyle(fontWeight: FontWeight.bold)),
       centerTitle: true,
       backgroundColor: Colors.deepPurple,
       elevation: 2,
@@ -123,7 +127,7 @@ class CategoryScreenState extends State<CategoryScreen> {
     }
 
     return SizedBox(
-      height: 110,
+      height: 150, // Increased size
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
@@ -145,13 +149,17 @@ class CategoryScreenState extends State<CategoryScreen> {
               filterProductsByCategory(categoryId);
             },
             child: Container(
-              width: 100,
+              width: 130, // Increased width
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              padding: const EdgeInsets.all(8), // Padding added
               decoration: BoxDecoration(
-                color: isSelected ? Colors.deepPurple.withAlpha(25) : Colors.white,
+                color: isSelected
+                    ? Colors.deepPurple.withAlpha(25)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
+                  BoxShadow(
+                      color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
                 ],
               ),
               child: Column(
@@ -160,22 +168,29 @@ class CategoryScreenState extends State<CategoryScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.network(
-                      imageUrl.isNotEmpty ? imageUrl : 'https://via.placeholder.com/60',
-                      width: 60,
-                      height: 60,
+                      imageUrl.isNotEmpty
+                          ? imageUrl
+                          : 'https://via.placeholder.com/80',
+                      width: 80, // Increased image size
+                      height: 80,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.image_not_supported, size: 40),
+                          const Icon(Icons.image_not_supported, size: 50),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    category['name']?.toString() ?? 'No Name',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isSelected ? Colors.deepPurple : Colors.black87,
+                  Flexible(
+                    child: Text(
+                      category['name']?.toString() ?? 'No Name',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color:
+                            isSelected ? Colors.deepPurple : Colors.black87,
+                      ),
                     ),
                   ),
                 ],
@@ -192,17 +207,21 @@ class CategoryScreenState extends State<CategoryScreen> {
       return const Expanded(child: Center(child: CircularProgressIndicator()));
     }
     if (filteredProducts.isEmpty) {
-      return const Expanded(child: Center(child: Text("No products in this category")));
+      return const Expanded(
+          child: Center(child: Text("No products in this category")));
     }
 
-    final cartProvider = Provider.of<cart_provider.CartProvider>(context, listen: false);
+    final cartProvider =
+        Provider.of<cart_provider.CartProvider>(context, listen: false);
 
     return Expanded(
       child: ListView.builder(
         itemCount: filteredProducts.length,
         itemBuilder: (context, index) {
           final product = filteredProducts[index];
-          final imageUrl = (product['image'] ?? 'https://via.placeholder.com/100').toString();
+          final imageUrl =
+              (product['image'] ?? 'https://via.placeholder.com/100')
+                  .toString();
 
           return GestureDetector(
             onTap: () {
@@ -226,14 +245,17 @@ class CategoryScreenState extends State<CategoryScreen> {
               );
             },
             child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              margin:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               elevation: 3,
               child: Row(
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(15), bottomLeft: Radius.circular(15)),
+                        topLeft: Radius.circular(15),
+                        bottomLeft: Radius.circular(15)),
                     child: Image.network(
                       imageUrl,
                       width: 100,
@@ -243,32 +265,40 @@ class CategoryScreenState extends State<CategoryScreen> {
                         width: 100,
                         height: 100,
                         color: Colors.grey.withAlpha(25),
-                        child: const Icon(Icons.image_not_supported, size: 40),
+                        child:
+                            const Icon(Icons.image_not_supported, size: 40),
                       ),
                     ),
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             product['name']?.toString() ?? 'No Name',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             "₹${product['price'] ?? '0'}",
                             style: const TextStyle(
-                                fontSize: 15, color: Colors.green, fontWeight: FontWeight.w500),
+                                fontSize: 15,
+                                color: Colors.green,
+                                fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            product['description']?.toString() ?? 'No description',
+                            product['description']?.toString() ??
+                                'No description',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.black.withAlpha(150), fontSize: 13),
+                            style: TextStyle(
+                                color: Colors.black.withAlpha(150),
+                                fontSize: 13),
                           ),
                         ],
                       ),
@@ -291,7 +321,7 @@ class CategoryScreenState extends State<CategoryScreen> {
         children: [
           buildCategoryList(),
           const Divider(height: 1),
-          buildProductList(),  // Always show product list, filtered or all
+          buildProductList(),
         ],
       ),
     );
