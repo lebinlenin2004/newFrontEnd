@@ -1,101 +1,120 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
-class CartItem {
-  final String id;
-  final String title;
-  final int quantity;
-  final double price;
-
-  CartItem({
-    required this.id,
-    required this.title,
-    required this.quantity,
-    required this.price,
-  });
-}
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/cart_item.dart';
 
 class CartProvider with ChangeNotifier {
-  final Map<String, CartItem> _items = {};
+  Map<String, CartItem> _items = {};
 
-  Map<String, CartItem> get items {
-    return {..._items};
+  Map<String, CartItem> get items => {..._items};
+
+  double get totalAmount {
+    return _items.values.fold(
+        0.0, (sum, item) => sum + (item.price * item.quantity));
   }
 
-  void addItem(String productId, double price, String title) {
+  // 🔥 ADD ITEM TO CART
+  Future<void> addItem(String productId, String title, double price) async {
     if (_items.containsKey(productId)) {
-      // Increase quantity
       _items.update(
         productId,
-        (existingCartItem) => CartItem(
-          id: existingCartItem.id,
-          title: existingCartItem.title,
-          quantity: existingCartItem.quantity + 1,
-          price: existingCartItem.price,
+        (existingItem) => CartItem(
+          id: existingItem.id,
+          title: existingItem.title,
+          price: existingItem.price,
+          quantity: existingItem.quantity + 1,
         ),
       );
     } else {
-      // Add new item
       _items.putIfAbsent(
         productId,
         () => CartItem(
-          id: DateTime.now().toString(),
+          id: productId,
           title: title,
-          quantity: 1,
           price: price,
+          quantity: 1,
         ),
       );
     }
     notifyListeners();
   }
 
-  void removeItem(String productId) {
-    _items.remove(productId);
-    notifyListeners();
+  // 📥 Fetch Cart from Backend
+  Future<void> fetchCartFromServer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8000/api/cart/'),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        _items = {}; // Clear local items
+
+        for (var item in data['cart_items']) {
+          _items[item['product_id'].toString()] = CartItem(
+            id: item['product_id'].toString(),
+            title: item['product_name'].toString(),
+            quantity: int.tryParse(item['quantity'].toString()) ?? 1,
+            price: double.tryParse(item['price'].toString()) ?? 0,
+          );
+        }
+        notifyListeners();
+      } else {
+        debugPrint("Failed to load cart: ${response.statusCode}");
+      }
+    } catch (error) {
+      debugPrint("Fetch Cart Error: $error");
+    }
   }
 
-  void incrementItem(String productId) {
+  // ➕ Increment Quantity
+  Future<void> incrementItem(String productId) async {
     if (_items.containsKey(productId)) {
       _items.update(
         productId,
-        (existing) => CartItem(
-          id: existing.id,
-          title: existing.title,
-          quantity: existing.quantity + 1,
-          price: existing.price,
+        (item) => CartItem(
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity + 1,
         ),
       );
       notifyListeners();
     }
   }
 
-  void decrementItem(String productId) {
-    if (_items.containsKey(productId)) {
-      if (_items[productId]!.quantity > 1) {
-        _items.update(
-          productId,
-          (existing) => CartItem(
-            id: existing.id,
-            title: existing.title,
-            quantity: existing.quantity - 1,
-            price: existing.price,
-          ),
-        );
-      } else {
-        _items.remove(productId);
-      }
-      notifyListeners();
+  // ➖ Decrement Quantity
+  Future<void> decrementItem(String productId) async {
+    if (!_items.containsKey(productId)) return;
+
+    if (_items[productId]!.quantity > 1) {
+      _items.update(
+        productId,
+        (item) => CartItem(
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity - 1,
+        ),
+      );
+    } else {
+      removeItem(productId);
     }
+    notifyListeners();
   }
 
-  int get itemCount {
-    return _items.length;
-  }
-
-  double get totalAmount {
-    var total = 0.0;
-    _items.forEach((key, cartItem) {
-      total += cartItem.price * cartItem.quantity;
-    });
-    return total;
+  // 🗑 Remove Item
+  Future<void> removeItem(String productId) async {
+    _items.remove(productId);
+    notifyListeners();
   }
 }

@@ -231,11 +231,11 @@ class CategoryScreenState extends State<CategoryScreen> {
                   builder: (_) => ProductDetailScreen(
                     product: product,
                     onAddToCart: () {
-                      cartProvider.addItem(
-                        product['id'].toString(),
-                        double.tryParse(product['price'].toString()) ?? 0,
-                        product['name'],
-                      );
+                     cartProvider.addItem(
+  product['id'].toString(),
+  product['name'].toString(),
+  double.tryParse(product['price'].toString()) ?? 0,
+);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Added to cart!')),
                       );
